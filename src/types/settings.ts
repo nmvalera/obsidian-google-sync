@@ -8,4 +8,6 @@ export type GoogleLookupPluginSettings = {
 	template_file_event: string;
 	event_date_format: string;
 	rename_person_file: boolean;
+	folder_event: string;
+	event_default_name: string;
 };

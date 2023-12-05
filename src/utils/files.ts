@@ -13,6 +13,22 @@ export const maybeGetSelectedText = (app: App) => {
 	return view?.editor.getSelection();
 };
 
+export const createNewFile = async (app: App, folder: string, title: string, content: string) => {
+	// if folder is empty, then default to active file's folder, if no active folder then default to root of vault
+	if (!folder) {
+		const file: TFile | null = app.workspace.getActiveFile();
+		if (file && file.parent) {
+			folder = file.parent.path;
+		} else {
+			folder = app.vault.getRoot().path;
+		}
+	}
+	const newPath = `${folder}/${sanitizeHeading(title)}.md`;
+	console.log(`creating new file at ${newPath}`);
+	const newFile = await app.vault.create(newPath, content);
+	app.workspace.getLeaf().openFile(newFile);
+};
+
 export const insertIntoEditorRange = (app: App, content: string) => {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	const editor: Editor | undefined = view?.editor;

@@ -2,13 +2,15 @@ import { getCalendarService, searchCalendarsEvents } from '@/api/google/calendar
 import { GoogleAccount } from '@/models/Account';
 import { App, moment, Notice, SuggestModal } from 'obsidian';
 import { EventResult } from '@/types';
-import { insertIntoEditorRange, maybeGetSelectedText } from '@/utils';
+import { insertIntoEditorRange, maybeGetSelectedText, createNewFile } from '@/utils';
 import { Event } from '@/models/Event';
 import { AuthModal } from './auth-modal';
 
 type ModalOptions = {
 	template: string | undefined;
 	dateFormat: string | undefined;
+	folder: string;
+	defaultName: string;
 };
 export class EventSuggestModal extends SuggestModal<EventResult> {
 	#initialQuery: moment.Moment;
@@ -64,7 +66,7 @@ export class EventSuggestModal extends SuggestModal<EventResult> {
 	async onChooseSuggestion(event: EventResult, evt: MouseEvent | KeyboardEvent) {
 		new Notice(`Inserted info for ${event.event.summary}`);
 		const e = new Event(event, this.#options.template, this.#options.dateFormat);
-		insertIntoEditorRange(this.app, await e.generateFromTemplate(this.app));
+		createNewFile(this.app, this.#options.folder, event.event.summary ? event.event.summary: this.#options.defaultName , await e.generateFromTemplate(this.app));
 	}
 
 	private async initServices() {

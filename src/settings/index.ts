@@ -1,4 +1,5 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
+import { FolderSuggest } from "./suggesters/FolderSuggester";
 import GoogleLookupPlugin from '@/main';
 import { GoogleLookupPluginSettings, KeysMatching } from '@/types';
 import { GoogleAccount } from '@/models/Account';
@@ -8,13 +9,16 @@ import { ConfirmModal } from '@/ui/confirm-modal';
 export const DEFAULT_SETTINGS: Partial<GoogleLookupPluginSettings> = {
 	client_redirect_uri_port: '42601',
 	folder_person: '',
-	rename_person_file: true
+	rename_person_file: true,
+	folder_event: '',
+	event_default_name: 'Untitled'
 };
 
 type CommonSettingParams = {
 	container?: HTMLElement;
 	name: string;
 	description: string | DocumentFragment;
+	defaultValue?: string;
 };
 type ToggleSettingParams = { key: KeysMatching<GoogleLookupPluginSettings, boolean> } & CommonSettingParams;
 
@@ -59,11 +63,9 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 				'When enabled, this will rename the note to the name of the person that was imported and move the note into a folder',
 			key: 'rename_person_file'
 		});
-		this.insertTextInputSetting({
+		this.insertPathInputSetting({
 			name: 'Folder for people notes',
-			description:
-				'When the above option is enabled, the person note will move to this folder.  An empty value (default) means the file will not move to any new directory',
-			placeholder: 'people',
+			description: 'Folder for people notes',
 			key: 'folder_person'
 		});
 		this.insertTextInputSetting({
@@ -94,6 +96,18 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 			description: 'Date format to be used on the start date field.',
 			placeholder: 'ddd, MMM Do @ hh:mma',
 			key: 'event_date_format'
+		});
+		this.insertPathInputSetting({
+			name: 'Folder for Event notes',
+			description: 'Folder for events notes',
+			key: 'folder_event'
+		});
+		this.insertTextInputSetting({
+			name: 'Default Name for Event notes',
+			description:'Default Name for an event in case the event does not have a summary.',
+			defaultValue: "Untitled",
+			placeholder: 'Untitled',
+			key: 'event_default_name'
 		});
 
 		containerEl.createEl('h3', { text: 'Google Client' });
@@ -146,6 +160,7 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 		placeholder,
 		key,
 		name,
+		defaultValue,
 		description
 	}: TextInputSettingParams) {
 		new Setting(container)
@@ -160,9 +175,33 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-					.setValue(this.plugin.settings![key] || '');
+					.setValue(this.plugin.settings![key] || defaultValue || '');
 			});
 	}
+
+	private insertPathInputSetting({
+		container = this.containerEl,
+		placeholder,
+		key,
+		name,
+		description
+	}: TextInputSettingParams) {
+		new Setting(container)
+			.setName(name)
+			.setDesc(description)
+			.addSearch((cb) => {
+                new FolderSuggest(cb.inputEl);
+                cb.setPlaceholder(placeholder || "Example: folder1/folder2")
+                    .setValue(this.plugin.settings![key] || '')
+                    .onChange((new_folder) => {
+                        this.plugin.settings![key] = new_folder;
+						this.plugin.saveSettings();
+                    });
+                // @ts-ignore
+                cb.containerEl.addClass("templater_search");
+            });
+	}
+
 	private insertToggleSetting({ container = this.containerEl, key, name, description }: ToggleSettingParams) {
 		new Setting(container)
 			.setName(name)
