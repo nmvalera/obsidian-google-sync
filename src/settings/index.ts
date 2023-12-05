@@ -187,6 +187,14 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 	}) {
 		new Setting(container)
 			.setName(name)
+			.addTextArea((ta) => {
+				ta.setPlaceholder('calendar IDs')
+					.setValue(account.calendarIds.join(',') || '')
+					.onChange(async (v) => {
+						account.calendarIds = v.split(',').map((s) => s.trim());
+						GoogleAccount.writeAccountsToStorage();
+					});
+			})
 			.addExtraButton((b) => {
 				b.setIcon('reset');
 				b.setTooltip('refresh account credentials');

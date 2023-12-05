@@ -5,6 +5,7 @@ import { EventResult, GoogleServiceOptions } from '@/types';
 interface QueryOptions {
 	service: calendar_v3.Calendar;
 	accountName: string;
+	calendarIds: string[];
 }
 
 export const getCalendarService = async ({ credentials, token }: GoogleServiceOptions) => {
@@ -16,13 +17,33 @@ export const getCalendarService = async ({ credentials, token }: GoogleServiceOp
 	});
 };
 
-export const searchCalendarEvents = async (
+export const searchCalendarsEvents = async (
 	query: moment.Moment,
-	{ service, accountName }: QueryOptions
-): Promise<EventResult[] | undefined> => {
+	{ service, accountName, calendarIds }: QueryOptions
+): Promise<EventResult[] | undefined> => {	
+	// For each calendar, query the events
+	let events: any[] = []
+	for (const calendarId of calendarIds) {
+		try {
+			const items = await searchCalendarEvents(service, accountName, calendarId, query)
+			events = events.concat(items)
+		} catch (err: any) {
+			console.warn(`${err.message}`);
+		}
+	}
+
+	return events;
+};
+
+export const searchCalendarEvents = async (
+	service: calendar_v3.Calendar,
+	accountName: string,
+	calendarId: string,
+	query: moment.Moment,
+): Promise<EventResult[] | undefined> => {	
 	try {
 		const response = await service.events.list({
-			calendarId: 'primary',
+			calendarId: calendarId,
 			maxAttendees: 100,
 			singleEvents: true,
 			maxResults: 12,
@@ -46,6 +67,7 @@ export const searchCalendarEvents = async (
 				summary: summary || '',
 				description: description || '',
 				accountSource: accountName,
+				calendarId: calendarId,
 				htmlLink,
 				organizer: organizer?.email || '',
 				startTime: start?.dateTime,

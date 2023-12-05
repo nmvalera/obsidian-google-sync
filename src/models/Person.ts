@@ -58,9 +58,9 @@ export class Person {
 			'org.title': this.#person.org?.title || '',
 			'org.department': this.#person.org?.department || '',
 			'org.name': this.#person.org?.name || '',
-			type: this.#person.type,
-			link: this.getContactUrl(),
-			source: this.#person.accountSource.toLocaleLowerCase(),
+			type: this.#person.type || '',
+			link: this.getContactUrl() || '',
+			source: this.#person.accountSource.toLocaleLowerCase() || '',
 			urls: this.#person.urls?.map((u) => `${u?.type}: ${u?.value}`).join(', ') || '',
 			relations: this.#person.relations?.map((r) => `${r?.type}: ${r?.person}`).join(', ') || '',
 			clientData: this.#person.clientData?.map((c) => `${c?.key}: ${c?.value}`).join(', ') || '',
@@ -70,7 +70,8 @@ export class Person {
 		};
 
 		for (const [k, v] of Object.entries(transform)) {
-			templateContents = templateContents.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'gi'), v);
+			let value = Array.isArray(v) ? v.join(', ') : v;
+			templateContents = templateContents.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'gi'), value);
 		}
 		templateContents = templateContents
 			.replace(/{{\s*date\s*}}/gi, now.format('YYYY-MM-DD'))

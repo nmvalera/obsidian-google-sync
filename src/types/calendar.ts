@@ -2,6 +2,7 @@ export type EventResult = {
 	summary: string;
 	description: string;
 	accountSource: string;
+	calendarId: string;
 	htmlLink: string | undefined | null;
 	organizer: string;
 	attendees: {

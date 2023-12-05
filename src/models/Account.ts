@@ -10,14 +10,17 @@ export class GoogleAccount {
 	#token: string | undefined;
 	#accountName: string;
 
+	#calendarIds: string[];
+
 	#peopleService: people_v1.People | undefined;
 	#calendarService: calendar_v3.Calendar | undefined;
 
 	static #allAccounts: Record<string, GoogleAccount> = {};
 
-	constructor(name: string, token: string | undefined) {
+	constructor(name: string, token: string | undefined, calendarIds: string[]) {
 		this.#accountName = name;
 		this.#token = token;
+		this.#calendarIds = calendarIds;
 	}
 
 	static get credentials() {
@@ -37,14 +40,14 @@ export class GoogleAccount {
 	}
 
 	static createNewAccount(app: App, callback: () => void) {
-		const account = new GoogleAccount('NEW_ACCOUNT', undefined);
+		const account = new GoogleAccount('NEW_ACCOUNT', undefined, ["primary"]);
 		AuthModal.createAndOpenNewModal(app, account, callback);
 	}
 
 	static writeAccountsToStorage() {
 		const accountsData: any = {};
 		for (const a of Object.values(GoogleAccount.#allAccounts)) {
-			accountsData[a.accountName] = a.token;
+			accountsData[a.accountName] = {token: a.token, calendars: a.calendarIds};
 		}
 		window.localStorage.setItem(GoogleAccount.STORAGEKEY, JSON.stringify(accountsData));
 	}
@@ -55,16 +58,17 @@ export class GoogleAccount {
 			return;
 		}
 
-		const tokens = JSON.parse(storedValue);
+		const data = JSON.parse(storedValue);
 
-		for (const accountName of Object.keys(tokens)) {
-			new GoogleAccount(accountName, tokens[accountName]).addToAccountsList();
+		for (const accountName of Object.keys(data)) {
+			new GoogleAccount(accountName, data[accountName]["token"],  data[accountName]["calendars"]).addToAccountsList();
 		}
 	}
 	get token() {
 		return this.#token;
 	}
 	set token(t: string | undefined) {
+		console.log(`setting token to ${t}`);
 		this.#token = t;
 	}
 
@@ -74,6 +78,15 @@ export class GoogleAccount {
 
 	set accountName(name: string) {
 		this.#accountName = name;
+	}
+
+	get calendarIds() {
+		return this.#calendarIds;
+	}
+
+	set calendarIds(ids: string[]) {
+		console.log(`setting calendarIds to ${ids}`)
+		this.#calendarIds = ids;
 	}
 
 	set peopleService(service: people_v1.People | undefined) {

@@ -1,10 +1,11 @@
-import { getCalendarService, searchCalendarEvents } from '@/api/google/calendar-search';
+import { getCalendarService, searchCalendarsEvents } from '@/api/google/calendar-search';
 import { GoogleAccount } from '@/models/Account';
 import { App, moment, Notice, SuggestModal } from 'obsidian';
 import { EventResult } from '@/types';
 import { insertIntoEditorRange, maybeGetSelectedText } from '@/utils';
 import { Event } from '@/models/Event';
 import { AuthModal } from './auth-modal';
+import { calendar } from '@googleapis/calendar';
 
 type ModalOptions = {
 	template: string | undefined;
@@ -33,9 +34,11 @@ export class EventSuggestModal extends SuggestModal<EventResult> {
 			if (!account.calendarService) {
 				continue;
 			}
-			const accountResults = await searchCalendarEvents(queryMoment, {
+			const accountResults = await searchCalendarsEvents(queryMoment, 
+				{
 				service: account.calendarService,
-				accountName: account.accountName
+				accountName: account.accountName,
+				calendarIds: account.calendarIds,
 			});
 			if (accountResults) {
 				results.push(...accountResults);
