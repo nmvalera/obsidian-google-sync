@@ -30,18 +30,17 @@ export default class GoogleLookupPlugin extends Plugin {
 
 		this.addCommandIfMarkdownView('Insert Contact Info', 'insert-contact-info', () => {
 			new PersonSuggestModal(this.app, {
-				renameFile: this.settings!.rename_person_file,
-				template: this.settings!.template_file_person,
-				moveToFolder: this.settings!.folder_person,
-				newFilenameTemplate: this.settings!.person_filename_format
+				template: this.settings!.contacts_template_file,
+				moveToFolder: this.settings!.contacts_folder,
+				newFilenameTemplate: this.settings!.contacts_filename_format
 			}).open();
 		});
 		this.addCommandIfMarkdownView('Insert Event Info', 'insert-event-info', () => {
 			new EventSuggestModal(this.app, { 
-				folder: this.settings!.folder_event,
-				defaultName: this.settings!.event_default_name,
-				template: this.settings!.template_file_event, 
-				dateFormat: this.settings!.event_date_format }).open();
+				folder: this.settings!.events_folder,
+				defaultName: this.settings!.events_default_name,
+				template: this.settings!.events_template_file
+			}).open();
 		});
 
 		this.addSettingTab(new GoogleLookupSettingTab(this.app, this));

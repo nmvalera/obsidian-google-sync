@@ -2,7 +2,7 @@ import { getPeopleService, searchContactsAndDirectory } from '@/api/google/peopl
 import { GoogleAccount } from '@/models/Account';
 import { App, Notice, SuggestModal } from 'obsidian';
 import { PersonResult } from '@/types';
-import { insertIntoEditorRange, maybeGetSelectedText, renameFile } from '@/utils';
+import { insertIntoEditorRange, maybeGetSelectedText, renameFile, createNewFile } from '@/utils';
 import { Person } from '@/models/Person';
 import { AuthModal } from './auth-modal';
 
@@ -62,10 +62,7 @@ export class PersonSuggestModal extends SuggestModal<PersonResult> {
 	async onChooseSuggestion(person: PersonResult, evt: MouseEvent | KeyboardEvent) {
 		new Notice(`Inserted info for ${person.firstName}`);
 		const p = new Person(person, this.#options.template, this.#options.newFilenameTemplate);
-		insertIntoEditorRange(this.app, await p.generateFromTemplate(this.app));
-		if (this.#options.renameFile) {
-			await renameFile(app, p.getTitle(), this.#options.moveToFolder);
-		}
+		createNewFile(this.app, this.#options.moveToFolder, p.getTitle(), await p.generateFromTemplate(this.app));
 	}
 
 	private async initServices() {

@@ -1,5 +1,6 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import { FolderSuggest } from "./suggesters/FolderSuggester";
+import { FolderSuggest, } from "./suggesters/FolderSuggest";
+import { FileSuggest } from "./suggesters/FileSuggest";
 import GoogleLookupPlugin from '@/main';
 import { GoogleLookupPluginSettings, KeysMatching } from '@/types';
 import { GoogleAccount } from '@/models/Account';
@@ -7,17 +8,23 @@ import { AuthModal } from '@/ui/auth-modal';
 import { ConfirmModal } from '@/ui/confirm-modal';
 
 export const DEFAULT_SETTINGS: Partial<GoogleLookupPluginSettings> = {
+	contacts_enabled: false,
+	contacts_template: '',
+	contacts_folder: '',
+	contacts_filename_format: '{{firstname}} {{lastname}}',
+
+	events_enabled: false,
+	events_template: '',
+	events_folder: '',
+	events_default_name: '',
+
 	client_redirect_uri_port: '42601',
-	folder_person: '',
-	rename_person_file: true,
-	folder_event: '',
-	event_default_name: 'Untitled'
 };
 
 type CommonSettingParams = {
 	container?: HTMLElement;
 	name: string;
-	description: string | DocumentFragment;
+	description?: string | DocumentFragment;
 	defaultValue?: string;
 };
 type ToggleSettingParams = { key: KeysMatching<GoogleLookupPluginSettings, boolean> } & CommonSettingParams;
@@ -46,27 +53,19 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 			return;
 		}
 
-		containerEl.createEl('h3', { text: 'Contact Info' });
-		this.insertTextInputSetting({
-			name: 'Contact Template',
-			description: getDocumentFragmentWithLink(
-				'File containing template content for contact info.  Default template and more info',
-				'available here',
-				'https://ntawileh.github.io/obsidian-google-lookup/person'
-			),
-			placeholder: '_assets/templates/t_person',
-			key: 'template_file_person'
+		this.insertHeaderToggleSetting({
+			name: 'Contacts',
+			key: 'contacts_enabled'
 		});
-		this.insertToggleSetting({
-			name: 'Rename and move person file',
-			description:
-				'When enabled, this will rename the note to the name of the person that was imported and move the note into a folder',
-			key: 'rename_person_file'
+		this.insertFilePathInputSetting({
+			name: 'Contact Note Template',
+			description: 'Choose the file to use as template',
+			key: 'contacts_template_file'
 		});
-		this.insertPathInputSetting({
-			name: 'Folder for people notes',
-			description: 'Folder for people notes',
-			key: 'folder_person'
+		this.insertFolderPathInputSetting({
+			name: 'Contact Folder',
+			description: 'New contact notes will be created here',
+			key: 'contacts_folder'
 		});
 		this.insertTextInputSetting({
 			name: 'Filename format for people notes',
@@ -77,37 +76,29 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 			),
 
 			placeholder: '{{lastname}}, {{firstname}}',
-			key: 'person_filename_format'
-		});
-		containerEl.createEl('h3', { text: 'Events Info' });
-		this.insertTextInputSetting({
-			name: 'Event Template',
-			description: getDocumentFragmentWithLink(
-				'File containing template content for events.  Default template and more info',
-				'available here',
-				'https://ntawileh.github.io/obsidian-google-lookup/event'
-			),
-			placeholder: '_assets/templates/t_event',
-			key: 'template_file_event'
+			key: 'contacts_filename_format'
 		});
 
-		this.insertTextInputSetting({
-			name: 'Date Format',
-			description: 'Date format to be used on the start date field.',
-			placeholder: 'ddd, MMM Do @ hh:mma',
-			key: 'event_date_format'
+		this.insertHeaderToggleSetting({
+			name: 'Events',
+			key: 'events_enabled'
 		});
-		this.insertPathInputSetting({
-			name: 'Folder for Event notes',
-			description: 'Folder for events notes',
-			key: 'folder_event'
+		this.insertFilePathInputSetting({
+			name: 'Event Note Template',
+			description: 'Choose the file to use as template',
+			key: 'events_template_file'
+		});
+		this.insertFolderPathInputSetting({
+			name: 'Event Folder',
+			description: 'New event notes will be created here',
+			key: 'events_folder'
 		});
 		this.insertTextInputSetting({
 			name: 'Default Name for Event notes',
 			description:'Default Name for an event in case the event does not have a summary.',
 			defaultValue: "Untitled",
 			placeholder: 'Untitled',
-			key: 'event_default_name'
+			key: 'events_default_name'
 		});
 
 		containerEl.createEl('h3', { text: 'Google Client' });
@@ -165,7 +156,7 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 	}: TextInputSettingParams) {
 		new Setting(container)
 			.setName(name)
-			.setDesc(description)
+			.setDesc(description || '')
 			.addText((text) => {
 				text
 					.setPlaceholder(placeholder ? placeholder : '')
@@ -179,7 +170,7 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 			});
 	}
 
-	private insertPathInputSetting({
+	private insertFolderPathInputSetting({
 		container = this.containerEl,
 		placeholder,
 		key,
@@ -188,10 +179,33 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 	}: TextInputSettingParams) {
 		new Setting(container)
 			.setName(name)
-			.setDesc(description)
+			.setDesc(description || '')
 			.addSearch((cb) => {
-                new FolderSuggest(cb.inputEl);
+                new FolderSuggest(this.app, cb.inputEl);
                 cb.setPlaceholder(placeholder || "Example: folder1/folder2")
+                    .setValue(this.plugin.settings![key] || '')
+                    .onChange((new_folder) => {
+                        this.plugin.settings![key] = new_folder;
+						this.plugin.saveSettings();
+                    });
+                // @ts-ignore
+                cb.containerEl.addClass("templater_search");
+            });
+	}
+
+	private insertFilePathInputSetting({
+		container = this.containerEl,
+		placeholder,
+		key,
+		name,
+		description
+	}: TextInputSettingParams) {
+		new Setting(container)
+			.setName(name)
+			.setDesc(description || '')
+			.addSearch((cb) => {
+                new FileSuggest(this.app, cb.inputEl);
+                cb.setPlaceholder(placeholder || "Example: folder/note")
                     .setValue(this.plugin.settings![key] || '')
                     .onChange((new_folder) => {
                         this.plugin.settings![key] = new_folder;
@@ -205,7 +219,7 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 	private insertToggleSetting({ container = this.containerEl, key, name, description }: ToggleSettingParams) {
 		new Setting(container)
 			.setName(name)
-			.setDesc(description)
+			.setDesc(description || '')
 			.addToggle((tc) => {
 				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 				tc.setValue(this.plugin.settings![key]).onChange(async (v) => {
@@ -215,6 +229,21 @@ export class GoogleLookupSettingTab extends PluginSettingTab {
 				});
 			});
 	}
+
+	private insertHeaderToggleSetting({ container = this.containerEl, key, name }: ToggleSettingParams) {
+		new Setting(container)
+			.setName(name)
+			.setHeading()
+			.addToggle((tc) => {
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				tc.setValue(this.plugin.settings![key]).onChange(async (v) => {
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+					this.plugin.settings![key] = v;
+					await this.plugin.saveSettings();
+				});
+			});
+	}
+
 	private insertAccountSetting({
 		container = this.containerEl,
 		name,
