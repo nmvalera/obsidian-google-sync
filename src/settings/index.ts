@@ -9,12 +9,12 @@ import { ConfirmModal } from '@/ui/confirm-modal';
 
 export const DEFAULT_SETTINGS: Partial<GoogleLookupPluginSettings> = {
 	contacts_enabled: false,
-	contacts_template: '',
+	contacts_template_file: '',
 	contacts_folder: '',
 	contacts_filename_format: '{{firstname}} {{lastname}}',
 
 	events_enabled: false,
-	events_template: '',
+	events_template_file: '',
 	events_folder: '',
 	events_default_name: '',
 

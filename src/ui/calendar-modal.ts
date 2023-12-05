@@ -5,10 +5,10 @@ import { EventResult } from '@/types';
 import { insertIntoEditorRange, maybeGetSelectedText, createNewFile } from '@/utils';
 import { Event } from '@/models/Event';
 import { AuthModal } from './auth-modal';
+import { sanitizeHeading } from '../utils/files';
 
 type ModalOptions = {
 	template: string | undefined;
-	dateFormat: string | undefined;
 	folder: string;
 	defaultName: string;
 };
@@ -65,8 +65,9 @@ export class EventSuggestModal extends SuggestModal<EventResult> {
 
 	async onChooseSuggestion(event: EventResult, evt: MouseEvent | KeyboardEvent) {
 		new Notice(`Inserted info for ${event.event.summary}`);
-		const e = new Event(event, this.#options.template, this.#options.dateFormat);
-		createNewFile(this.app, this.#options.folder, event.event.summary ? event.event.summary: this.#options.defaultName , await e.generateFromTemplate(this.app));
+		const e = new Event(event, this.#options.template, "");
+		const filePath = `${this.#options.folder}/${sanitizeHeading(event.event.summary ? event.event.summary: this.#options.defaultName)}.md`;
+		createNewFile(this.app, filePath, await e.generateFromTemplate(this.app));
 	}
 
 	private async initServices() {

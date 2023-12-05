@@ -193,7 +193,7 @@ export const listContactGroups = async ({ service, accountName }: QueryOptions):
 	}
 }
 
-export const listContacts = async ({ service, accountName }: QueryOptions): Promise<people_v1.Schema$Person[] | undefined> => {	
+export const listContacts = async ({ service, accountName }: QueryOptions): Promise<PersonResult[] | undefined> => {	
 	const contactGroups = await listContactGroups({ service, accountName });
 	
 	// Create a map of contact group resource names to contact group names

@@ -73,7 +73,12 @@ export default class GoogleLookupPlugin extends Plugin {
 
 			// Cache all files in folder
 			let filesCache = new Map<string, {stillExist: boolean, file: TFile}>()
-			folder.children.forEach((file) => {filesCache[file.path] = {stillExist: false, file: file}})
+			folder.children.forEach((file) => {
+				// if file is a TFile, add it to cache
+				if (file instanceof TFile) {
+					filesCache.set(file.path, {stillExist: false, file: file})
+				}
+			})
 
 			let contacts = await personModal.getSuggestions('all')
 			for (let contact of contacts) {

@@ -7,7 +7,6 @@ import { Person } from '@/models/Person';
 import { AuthModal } from './auth-modal';
 
 type ModalOptions = {
-	renameFile: boolean;
 	moveToFolder: string;
 	template: string | undefined;
 	newFilenameTemplate: string | undefined;
@@ -66,18 +65,20 @@ export class PersonSuggestModal extends SuggestModal<PersonResult> {
 	async createPerson(person: PersonResult) {
 		new Notice(`Create Contact: ${person.firstName}  ${person.lastName}`);
 		const p = new Person(person, this.#options.template, this.#options.newFilenameTemplate);
-		createNewFile(this.app, this.#options.moveToFolder, p.getTitle(), await p.generateFromTemplate(this.app));
+		const filePath = `${this.#options.moveToFolder}/${sanitizeHeading(p.getTitle())}.md`
+		createNewFile(this.app, filePath, await p.generateFromTemplate(this.app));
 	}
 
-	async createOrUpdatePerson(person: PersonResult, filesCache: Map<string, TFile>) {
+	async createOrUpdatePerson(person: PersonResult, filesCache: Map<string, {stillExist: boolean, file: TFile}>) {
 		const p = new Person(person, this.#options.template, this.#options.newFilenameTemplate);
 		const filePath = `${this.#options.moveToFolder}/${sanitizeHeading(p.getTitle())}.md`
 		
-		if (filesCache[filePath]) {
+		let fileCache = filesCache.get(filePath)
+		if (fileCache) {
 			new Notice(`Trash Existing Contact: ${person.firstName}  ${person.lastName}`);
 			console.log(`trashing file ${filePath}`)
-			await this.app.vault.trash(filesCache[filePath].file, true)
-			filesCache[filePath].stillExist = true
+			await this.app.vault.trash(fileCache.file, true)
+			fileCache.stillExist = true
 		}
 
 		new Notice(`Create Contact: ${person.firstName}  ${person.lastName}`);
