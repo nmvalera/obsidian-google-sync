@@ -14,7 +14,8 @@ const readMask =
 const parsePersonData = (
 	p: people_v1.Schema$Person,
 	type: 'DIRECTORY' | 'CONTACTS',
-	accountSource: string
+	accountSource: string,
+	contactGroupMap?: Map<string, string>
 ): PersonResult => {
 	const {
 		names,
@@ -45,7 +46,7 @@ const parsePersonData = (
 				: undefined,
 		type,
 		emails: emailAddresses ? emailAddresses.map((e) => e.value) : [],
-		phones: phoneNumbers ? phoneNumbers.map((e) => e.value) : [],
+		phones: phoneNumbers ? phoneNumbers.map((e) => e.canonicalForm || e.value || '') : [],
 		birthdays: birthdays ? birthdays.map(({ date }) => (date ? formatBirthday(date) : '')) : [],
 		relations: relations
 			? relations.map(({ person, type }) => {
@@ -86,7 +87,7 @@ const parsePersonData = (
 						return m.contactGroupMembership;
 					})
 					.map(({ contactGroupMembership }) => {
-						return contactGroupMembership?.contactGroupResourceName;
+						return contactGroupMap?.get(contactGroupMembership?.contactGroupResourceName!) ?? contactGroupMembership?.contactGroupResourceName;
 					})
 			: [],
 		domainMembership: memberships
@@ -112,10 +113,12 @@ export const searchContactsAndDirectory = async (
 	query: string,
 	options: QueryOptions
 ): Promise<PersonResult[] | undefined> => {
+	let contacts = await searchContacts(query, options);
 	const directory = await searchDirectory(query, options);
-	const contacts = await searchContacts(query, options);
-
-	return directory && contacts ? directory.concat(contacts) : directory ? directory : contacts ? contacts : undefined;
+	if (directory) {
+		contacts = contacts?.concat(directory)
+	}
+	return contacts
 };
 
 export const searchDirectory = async (
@@ -172,6 +175,52 @@ export const searchContacts = async (
 		console.error(`unable to query contact: ${err.message}`);
 	}
 };
+
+export const listContactGroups = async ({ service, accountName }: QueryOptions): Promise<people_v1.Schema$ContactGroup[] | undefined> => {
+	try {
+		const response = await service.contactGroups.list({
+			pageSize: 1000,
+		});
+
+		if (response.status !== 200) {
+			console.warn(`error querying people api ${response.statusText}`);
+			return;
+		}
+
+		return response.data.contactGroups;
+	} catch (err: any) {
+		console.error(`unable to query contact groups: ${err.message}`);
+	}
+}
+
+export const listContacts = async ({ service, accountName }: QueryOptions): Promise<people_v1.Schema$Person[] | undefined> => {	
+	const contactGroups = await listContactGroups({ service, accountName });
+	
+	// Create a map of contact group resource names to contact group names
+	const contactGroupMap = new Map<string, string>();
+	contactGroups?.forEach((contactGroup) => {
+		contactGroupMap.set(contactGroup.resourceName!, `contactGroups/${contactGroup.name!}`);
+	});
+
+	try {
+		const response = await service.people.connections.list({
+			resourceName: 'people/me',
+			pageSize: 2000,
+			personFields: 'names,nicknames,emailAddresses,phoneNumbers,biographies,calendarUrls,organizations,metadata,birthdays,urls,clientData,relations,userDefined,biographies,addresses,memberships',
+		});
+
+		if (response.status !== 200) {
+			console.warn(`error querying people api ${response.statusText}`);
+			return;
+		}
+		
+		return response.data.connections?.map((p): PersonResult => {
+			return parsePersonData(p, 'CONTACTS', accountName, contactGroupMap);
+		});
+	} catch (err: any) {
+		console.error(`unable to query contacts: ${err.message}`);
+	}
+}
 
 export const getAuthenticatedUserEmail = async ({ service }: QueryOptions): Promise<string | null | undefined> => {
 	try {

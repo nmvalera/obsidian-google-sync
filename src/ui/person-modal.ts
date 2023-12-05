@@ -1,8 +1,8 @@
-import { getPeopleService, searchContactsAndDirectory } from '@/api/google/people-search';
+import { getPeopleService, searchContactsAndDirectory, listContacts } from '@/api/google/people-search';
 import { GoogleAccount } from '@/models/Account';
-import { App, Notice, SuggestModal } from 'obsidian';
+import { App, Notice, SuggestModal, TFile } from 'obsidian';
 import { PersonResult } from '@/types';
-import { insertIntoEditorRange, maybeGetSelectedText, renameFile, createNewFile } from '@/utils';
+import { insertIntoEditorRange, maybeGetSelectedText, renameFile, createNewFile, sanitizeHeading } from '@/utils';
 import { Person } from '@/models/Person';
 import { AuthModal } from './auth-modal';
 
@@ -33,7 +33,7 @@ export class PersonSuggestModal extends SuggestModal<PersonResult> {
 			if (!account.peopleService) {
 				continue;
 			}
-			const accountResults = await searchContactsAndDirectory(query, {
+			const accountResults = await listContacts({
 				service: account.peopleService,
 				accountName: account.accountName
 			});
@@ -60,9 +60,29 @@ export class PersonSuggestModal extends SuggestModal<PersonResult> {
 	}
 
 	async onChooseSuggestion(person: PersonResult, evt: MouseEvent | KeyboardEvent) {
-		new Notice(`Inserted info for ${person.firstName}`);
+		await this.createPerson(person);
+	}
+
+	async createPerson(person: PersonResult) {
+		new Notice(`Create Contact: ${person.firstName}  ${person.lastName}`);
 		const p = new Person(person, this.#options.template, this.#options.newFilenameTemplate);
 		createNewFile(this.app, this.#options.moveToFolder, p.getTitle(), await p.generateFromTemplate(this.app));
+	}
+
+	async createOrUpdatePerson(person: PersonResult, filesCache: Map<string, TFile>) {
+		const p = new Person(person, this.#options.template, this.#options.newFilenameTemplate);
+		const filePath = `${this.#options.moveToFolder}/${sanitizeHeading(p.getTitle())}.md`
+		
+		if (filesCache[filePath]) {
+			new Notice(`Trash Existing Contact: ${person.firstName}  ${person.lastName}`);
+			console.log(`trashing file ${filePath}`)
+			await this.app.vault.trash(filesCache[filePath].file, true)
+			filesCache[filePath].stillExist = true
+		}
+
+		new Notice(`Create Contact: ${person.firstName}  ${person.lastName}`);
+
+		await createNewFile(this.app, filePath, await p.generateFromTemplate(this.app));
 	}
 
 	private async initServices() {
