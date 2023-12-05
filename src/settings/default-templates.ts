@@ -28,9 +28,5 @@ Phone: {{phones}}
 
 `;
 export const DEFAULT_EVENT_TEMPLATE = `
-### {{summary}} 
-
-* {{start}}  - [Link]({{link}})
-* organizer {{organizer}}  
-* {{attendees}}  
+{{ event }}
 `;

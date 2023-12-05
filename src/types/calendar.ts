@@ -1,15 +1,8 @@
+import { GoogleAccount } from '@/models/Account';
+import { calendar_v3 } from '@googleapis/calendar';
+
 export type EventResult = {
-	summary: string;
-	description: string;
-	accountSource: string;
+	accountName: string;
 	calendarId: string;
-	htmlLink: string | undefined | null;
-	organizer: string;
-	attendees: {
-		email: string | undefined | null;
-		name: string | undefined | null;
-		response: string | undefined | null;
-	}[];
-	startTime: string | undefined | null;
-	endTime: string | undefined | null;
+	event: calendar_v3.Schema$Event;
 };

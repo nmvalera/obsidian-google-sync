@@ -32,6 +32,8 @@ export const searchCalendarsEvents = async (
 		}
 	}
 
+	console.log(`Found ${events.length} events for ${accountName} on ${query.format()}`);
+
 	return events;
 };
 
@@ -61,23 +63,7 @@ export const searchCalendarEvents = async (
 			return [];
 		}
 
-		return response.data.items.map((item): EventResult => {
-			const { summary, description, htmlLink, organizer, start, end, attendees } = item;
-			return {
-				summary: summary || '',
-				description: description || '',
-				accountSource: accountName,
-				calendarId: calendarId,
-				htmlLink,
-				organizer: organizer?.email || '',
-				startTime: start?.dateTime,
-				endTime: end?.dateTime,
-				attendees:
-					attendees?.map((a) => {
-						return { response: a.responseStatus, email: a.email, name: a.displayName };
-					}) || []
-			};
-		});
+		return response.data.items.map((event: calendar_v3.Schema$Event) => {return {event: event, accountName: accountName, calendarId: calendarId}});
 	} catch (err: any) {
 		console.warn(`Cannot query calendar service ${err.message}`);
 	}

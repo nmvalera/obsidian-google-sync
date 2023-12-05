@@ -5,7 +5,6 @@ import { EventResult } from '@/types';
 import { insertIntoEditorRange, maybeGetSelectedText } from '@/utils';
 import { Event } from '@/models/Event';
 import { AuthModal } from './auth-modal';
-import { calendar } from '@googleapis/calendar';
 
 type ModalOptions = {
 	template: string | undefined;
@@ -53,15 +52,17 @@ export class EventSuggestModal extends SuggestModal<EventResult> {
 	}
 
 	renderSuggestion(event: EventResult, el: HTMLElement) {
-		const startMoment = window.moment(event.startTime);
-		el.createEl('div', { text: event.summary });
-		el.createEl('small', {
-			text: `@ ${startMoment.format('hh:mma')}, ${startMoment.fromNow()}`
-		});
+		el.createEl('div', { text: event.event.summary || '' });
+		if (event.event.start) {
+			const startMoment = event.event.start.dateTime ? window.moment(event.event.start.dateTime) : window.moment(event.event.start.date);
+			el.createEl('small', {
+				text: `@ ${startMoment.format('hh:mma')}, ${startMoment.fromNow()}`
+			});
+		}
 	}
 
 	async onChooseSuggestion(event: EventResult, evt: MouseEvent | KeyboardEvent) {
-		new Notice(`Inserted info for ${event.summary}`);
+		new Notice(`Inserted info for ${event.event.summary}`);
 		const e = new Event(event, this.#options.template, this.#options.dateFormat);
 		insertIntoEditorRange(this.app, await e.generateFromTemplate(this.app));
 	}
